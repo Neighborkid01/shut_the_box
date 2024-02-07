@@ -1,10 +1,12 @@
 use std::{io, io::Write};
 use std::collections::BTreeSet;
 use rand::distributions::{Distribution, Uniform};
+use std::fs::OpenOptions;
 
 fn main() {
     let all_nums = BTreeSet::from([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     let mut board = all_nums.clone();
+    let mut board_states: Vec<String> = vec![];
     let mut possible_combinations: Vec::<BTreeSet<i32>>;
     let mut score = 0;
     let mut turn = 0;
@@ -40,7 +42,7 @@ fn main() {
         turn += 1;
         dice_sum = die.sample(&mut rng);
         if score < 39 { dice_sum += die.sample(&mut rng); }
-        println!("Turn: {}\tScore: {:0>2}\t|{}|", turn, score, board.to_string());
+        println!("Turn: {}\tScore: {:0>2}\t|{}|", turn, score, board.to_string(", "));
         println!("Rolled sum: {}\n", dice_sum);
 
         possible_combinations = sum_combinations[dice_sum - 1].clone();
@@ -52,7 +54,7 @@ fn main() {
 
         println!("Select which tiles to remove:");
         for (i, combination) in possible_combinations.iter().rev().enumerate() {
-            println!("{:0>2}. {}", i + 1, combination.to_string());
+            println!("{:0>2}. {}", i + 1, combination.to_string(", "));
         }
 
         // Ask user to select which combination
@@ -65,7 +67,18 @@ fn main() {
 
         score += dice_sum;
         board = board.difference(&selected_combination).cloned().collect();
+        board_states.push(all_nums.difference(&board).cloned().collect::<BTreeSet<_>>().to_string(""));
         clear_screen();
+    }
+
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("game_log.csv")
+        .unwrap();
+
+    if let Err(e) = writeln!(file, "{}", board_states.join(",")) {
+        eprintln!("Couldn't write to file: {}", e);
     }
 }
 
@@ -74,12 +87,12 @@ fn clear_screen() {
 }
 
 trait ToString {
-    fn to_string(&self) -> String;
+    fn to_string(&self, separator: &str) -> String;
 }
 
 impl ToString for BTreeSet<i32> {
-    fn to_string(&self) -> String {
-        self.iter().map(|s| s.to_string()).collect::<Vec<String>>().join(", ")
+    fn to_string(&self, separator: &str) -> String {
+        self.iter().map(|s| s.to_string()).collect::<Vec<String>>().join(separator)
     }
 }
 
