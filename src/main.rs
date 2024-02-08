@@ -74,13 +74,16 @@ fn main() {
             };
             println!("{} {:0>2}. {}", indicator, i + 1, combination.to_string(", "));
         }
+        println!("");
 
-        // Ask user to select which combination
-        print!("\n> ");
-        let _ = io::stdout().flush();
-        input = String::new();
-        io::stdin().read_line(&mut input).expect("Error reading input");
-        selected_index = input.trim().parse().unwrap();
+        selected_index = 0;
+        while selected_index == 0 || selected_index > possible_combinations.len() {
+            print!("> ");
+            let _ = io::stdout().flush();
+            input = String::new();
+            io::stdin().read_line(&mut input).expect("Error reading input");
+            selected_index = input.trim().parse().unwrap_or(0);
+        }
         selected_combination = possible_combinations[possible_combinations.len() - selected_index].clone();
 
         score += dice_sum;
