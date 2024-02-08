@@ -3,6 +3,9 @@ use std::collections::BTreeSet;
 use rand::distributions::{Distribution, Uniform};
 use std::fs::OpenOptions;
 
+mod optimal_choices;
+use optimal_choices::OptimalChoices;
+
 fn main() {
     let all_nums = BTreeSet::from([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     let mut board = all_nums.clone();
@@ -30,6 +33,15 @@ fn main() {
         /*11*/ vec![ BTreeSet::from([1, 2, 8]), BTreeSet::from([1, 3, 7]), BTreeSet::from([1, 4, 6]), BTreeSet::from([2, 3, 6]), BTreeSet::from([2, 4, 5]), BTreeSet::from([2, 9]), BTreeSet::from([3, 8]), BTreeSet::from([4, 7]), BTreeSet::from([5, 6]), BTreeSet::from([11]) ],
         /*12*/ vec![ BTreeSet::from([1, 2, 9]), BTreeSet::from([1, 3, 8]), BTreeSet::from([1, 4, 7]), BTreeSet::from([1, 5, 6]), BTreeSet::from([2, 3, 7]), BTreeSet::from([2, 4, 6]), BTreeSet::from([3, 4, 5]), BTreeSet::from([3, 9]), BTreeSet::from([4, 8]), BTreeSet::from([5, 7]), BTreeSet::from([12]) ],
     ];
+    let optimal_choices = OptimalChoices::new();
+    let show_optimal_choices: bool;
+
+    clear_screen();
+
+    println!("Display optimal choices? (y/n)");
+    input = String::new();
+    io::stdin().read_line(&mut input).expect("Error reading input");
+    show_optimal_choices = input.trim() == "y";
 
     clear_screen();
 
@@ -52,13 +64,19 @@ fn main() {
             break;
         }
 
+        let optimal_choice = optimal_choices.optimal_choice(&board, dice_sum);
         println!("Select which tiles to remove:");
         for (i, combination) in possible_combinations.iter().rev().enumerate() {
-            println!("{:0>2}. {}", i + 1, combination.to_string(", "));
+            let indicator = if show_optimal_choices && optimal_choice == *combination {
+                "*"
+            } else {
+                " "
+            };
+            println!("{} {:0>2}. {}", indicator, i + 1, combination.to_string(", "));
         }
 
         // Ask user to select which combination
-        print!("> ");
+        print!("\n> ");
         let _ = io::stdout().flush();
         input = String::new();
         io::stdin().read_line(&mut input).expect("Error reading input");
