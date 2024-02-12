@@ -41,7 +41,7 @@ fn main() -> io::Result<()> {
         /*12*/ vec![ BTreeSet::from([1, 2, 9]), BTreeSet::from([1, 3, 8]), BTreeSet::from([1, 4, 7]), BTreeSet::from([1, 5, 6]), BTreeSet::from([2, 3, 7]), BTreeSet::from([2, 4, 6]), BTreeSet::from([3, 4, 5]), BTreeSet::from([3, 9]), BTreeSet::from([4, 8]), BTreeSet::from([5, 7]), BTreeSet::from([12]) ],
     ];
     let optimal_choices = OptimalChoices::new();
-    let show_optimal_choices: bool;
+    let mut show_optimal_choices = false;
     let mut x: usize;
     let mut y: usize;
     let mut option_string: String;
@@ -49,9 +49,6 @@ fn main() -> io::Result<()> {
     let mut stdout = io::stdout();
 
     initial_clear_screen(&mut stdout)?;
-
-    input = get_input("Display optimal choices? (y/n): ");
-    show_optimal_choices = input.trim() == "y";
 
     clear_screen(&mut stdout)?;
 
@@ -98,6 +95,9 @@ fn main() -> io::Result<()> {
         while selected_index == 0 || selected_index > possible_combinations.len() {
             input = get_input("> ");
             selected_index = input.trim().parse().unwrap_or(0);
+            if selected_index == 123456789 {
+                show_optimal_choices = true;
+            }
         }
         selected_combination = possible_combinations[possible_combinations.len() - selected_index].clone();
 
