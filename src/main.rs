@@ -1,12 +1,19 @@
-use std::{io, io::Write};
+use core::str;
+use std::io::{self, Write};
 use std::collections::BTreeSet;
+use crossterm::queue;
+use crossterm::style::{ResetColor, SetForegroundColor};
 use rand::distributions::{Distribution, Uniform};
 use std::fs::OpenOptions;
+use crossterm::{
+    execute, cursor, terminal,
+    style::{Color, Print},
+};
 
 mod optimal_choices;
 use optimal_choices::OptimalChoices;
 
-fn main() {
+fn main() -> io::Result<()> {
     let all_nums = BTreeSet::from([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     let mut board = all_nums.clone();
     let mut board_states: Vec<String> = vec![];
@@ -35,15 +42,18 @@ fn main() {
     ];
     let optimal_choices = OptimalChoices::new();
     let show_optimal_choices: bool;
+    let mut x: usize;
+    let mut y: usize;
+    let mut option_string: String;
 
-    clear_screen();
+    let mut stdout = io::stdout();
 
-    println!("Display optimal choices? (y/n)");
-    input = String::new();
-    io::stdin().read_line(&mut input).expect("Error reading input");
+    initial_clear_screen(&mut stdout)?;
+
+    input = get_input("Display optimal choices? (y/n): ");
     show_optimal_choices = input.trim() == "y";
 
-    clear_screen();
+    clear_screen(&mut stdout)?;
 
     loop {
         if score == 45 {
@@ -67,21 +77,26 @@ fn main() {
         let optimal_choice = optimal_choices.optimal_choice(&board, dice_sum);
         println!("Select which tiles to remove:");
         for (i, combination) in possible_combinations.iter().rev().enumerate() {
-            let indicator = if show_optimal_choices && optimal_choice == *combination {
-                "*"
-            } else {
-                " "
-            };
-            println!("{} {:0>2}. {}", indicator, i + 1, combination.to_string(", "));
+            y = i / 3;
+            x = i % 3;
+            if show_optimal_choices && optimal_choice == *combination {
+                queue!(stdout, SetForegroundColor(Color::Green))?;
+            }
+
+            option_string = format!("  {:0>2}. {}", i + 1, combination.to_string(", "));
+            option_string = format!("{: <15}", option_string);
+            execute!(
+                stdout,
+                cursor::MoveTo((x as u16) * 15, (y as u16) + 4),
+                Print(option_string),
+                ResetColor,
+            )?;
         }
-        println!("");
+        println!("\n");
 
         selected_index = 0;
         while selected_index == 0 || selected_index > possible_combinations.len() {
-            print!("> ");
-            let _ = io::stdout().flush();
-            input = String::new();
-            io::stdin().read_line(&mut input).expect("Error reading input");
+            input = get_input("> ");
             selected_index = input.trim().parse().unwrap_or(0);
         }
         selected_combination = possible_combinations[possible_combinations.len() - selected_index].clone();
@@ -89,7 +104,7 @@ fn main() {
         score += dice_sum;
         board = board.difference(&selected_combination).cloned().collect();
         board_states.push(all_nums.difference(&board).cloned().collect::<BTreeSet<_>>().to_string(""));
-        clear_screen();
+        clear_screen(&mut stdout)?;
     }
 
     let mut file = OpenOptions::new()
@@ -101,10 +116,34 @@ fn main() {
     if let Err(e) = writeln!(file, "{}", board_states.join(",")) {
         eprintln!("Couldn't write to file: {}", e);
     }
+
+    Ok(())
 }
 
-fn clear_screen() {
-    print!("{esc}[2J{esc}[1;1H", esc = 27 as char);
+fn initial_clear_screen(stdout: &mut io::Stdout) -> io::Result<()> {
+    execute!(
+        stdout,
+        terminal::Clear(terminal::ClearType::All),
+        cursor::MoveTo(0, 0),
+    )?;
+    Ok(())
+}
+
+fn clear_screen(stdout: &mut io::Stdout) -> io::Result<()> {
+    execute!(
+        stdout,
+        terminal::Clear(terminal::ClearType::FromCursorUp),
+        cursor::MoveTo(0, 0),
+    )?;
+    Ok(())
+}
+
+fn get_input(text: &str) -> String {
+    let mut input = String::new();
+    print!("{}", text);
+    let _ = io::stdout().flush();
+    io::stdin().read_line(&mut input).expect("Error reading input");
+    input
 }
 
 trait ToString {
