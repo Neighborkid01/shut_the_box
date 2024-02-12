@@ -21,6 +21,7 @@ fn main() -> io::Result<()> {
     let mut score = 0;
     let mut turn = 0;
     let mut dice_sum;
+    let mut stdout = io::stdout();
     let mut input: String;
     let mut selected_index: usize;
     let mut selected_combination: BTreeSet::<i32>;
@@ -46,11 +47,7 @@ fn main() -> io::Result<()> {
     let mut y: usize;
     let mut option_string: String;
 
-    let mut stdout = io::stdout();
-
     initial_clear_screen(&mut stdout)?;
-
-    clear_screen(&mut stdout)?;
 
     loop {
         if score == 45 {
