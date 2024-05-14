@@ -20,6 +20,7 @@ fn main() -> io::Result<()> {
     let mut possible_combinations: Vec::<BTreeSet<i32>>;
     let mut score = 0;
     let mut turn = 0;
+    let mut stop = false;
     let mut dice_sum;
     let mut stdout = io::stdout();
     let mut input: String;
@@ -49,59 +50,74 @@ fn main() -> io::Result<()> {
 
     initial_clear_screen(&mut stdout)?;
 
-    loop {
-        if score == 45 {
-            println!("You win!");
-            break;
-        }
-
-        turn += 1;
-        dice_sum = die.sample(&mut rng);
-        if score < 39 { dice_sum += die.sample(&mut rng); }
-        println!("Turn: {}\tScore: {:0>2}\t|{}|", turn, score, board.to_string(", "));
-        println!("Rolled sum: {}\n", dice_sum);
-
-        possible_combinations = sum_combinations[dice_sum - 1].clone();
-        possible_combinations.retain(|combination| board.is_superset(combination));
-        if possible_combinations.len() == 0 {
-            println!("No possible combinations. You lose.");
-            break;
-        }
-
-        let optimal_choice = optimal_choices.optimal_choice(&board, dice_sum);
-        println!("Select which tiles to remove:");
-        for (i, combination) in possible_combinations.iter().rev().enumerate() {
-            y = i / 3;
-            x = i % 3;
-            if show_optimal_choices && optimal_choice == *combination {
-                queue!(stdout, SetForegroundColor(Color::Green))?;
+    while !stop {
+        loop {
+            if score == 45 {
+                println!("You win!");
+                break;
             }
 
-            option_string = format!("  {:0>2}. {}", i + 1, combination.to_string(", "));
-            option_string = format!("{: <15}", option_string);
-            execute!(
-                stdout,
-                cursor::MoveTo((x as u16) * 15, (y as u16) + 4),
-                Print(option_string),
-                ResetColor,
-            )?;
-        }
-        println!("\n");
+            turn += 1;
+            dice_sum = die.sample(&mut rng);
+            if score < 39 { dice_sum += die.sample(&mut rng); }
+            println!("Turn: {}\tScore: {:0>2}\t|{}|", turn, score, board.to_string(", "));
+            println!("Rolled sum: {}\n", dice_sum);
 
-        selected_index = 0;
-        while selected_index == 0 || selected_index > possible_combinations.len() {
-            input = get_input("> ");
-            selected_index = input.trim().parse().unwrap_or(0);
-            if selected_index == 123456789 {
-                show_optimal_choices = true;
+            possible_combinations = sum_combinations[dice_sum - 1].clone();
+            possible_combinations.retain(|combination| board.is_superset(combination));
+            if possible_combinations.len() == 0 {
+                println!("No possible combinations. You lose.");
+                break;
+            }
+
+            let optimal_choice = optimal_choices.optimal_choice(&board, dice_sum);
+            println!("Select which tiles to remove:");
+            for (i, combination) in possible_combinations.iter().rev().enumerate() {
+                y = i / 3;
+                x = i % 3;
+                if show_optimal_choices && optimal_choice == *combination {
+                    queue!(stdout, SetForegroundColor(Color::Green))?;
+                }
+
+                option_string = format!("  {:0>2}. {}", i + 1, combination.to_string(", "));
+                option_string = format!("{: <15}", option_string);
+                execute!(
+                    stdout,
+                    cursor::MoveTo((x as u16) * 15, (y as u16) + 4),
+                    Print(option_string),
+                    ResetColor,
+                )?;
+            }
+            println!("\n");
+
+            selected_index = 0;
+            while selected_index == 0 || selected_index > possible_combinations.len() {
+                input = get_input("> ");
+                selected_index = input.trim().parse().unwrap_or(0);
+                if selected_index == 123456789 {
+                    show_optimal_choices = true;
+                }
+            }
+            selected_combination = possible_combinations[possible_combinations.len() - selected_index].clone();
+
+            score += dice_sum;
+            board = board.difference(&selected_combination).cloned().collect();
+            board_states.push(all_nums.difference(&board).cloned().collect::<BTreeSet<_>>().to_string(""));
+            clear_screen(&mut stdout)?;
+        }
+
+        println!("\nPlay again? (Y/n)");
+        input = get_input("> ");
+        match input.trim() {
+            "n" | "N" | "no" | "No" => stop = true,
+            _ => {
+                board = all_nums.clone();
+                board_states = vec![];
+                score = 0;
+                turn = 0;
+                clear_screen(&mut stdout)?;
             }
         }
-        selected_combination = possible_combinations[possible_combinations.len() - selected_index].clone();
-
-        score += dice_sum;
-        board = board.difference(&selected_combination).cloned().collect();
-        board_states.push(all_nums.difference(&board).cloned().collect::<BTreeSet<_>>().to_string(""));
-        clear_screen(&mut stdout)?;
     }
 
     let mut file = OpenOptions::new()
@@ -152,4 +168,3 @@ impl ToString for BTreeSet<i32> {
         self.iter().map(|s| s.to_string()).collect::<Vec<String>>().join(separator)
     }
 }
-
