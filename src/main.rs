@@ -106,6 +106,16 @@ fn main() -> io::Result<()> {
             clear_screen(&mut stdout)?;
         }
 
+        let mut file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open("game_log.csv")
+            .unwrap();
+
+        if let Err(e) = writeln!(file, "{}", board_states.join(",")) {
+            eprintln!("Couldn't write to file: {}", e);
+        }
+
         println!("\nPlay again? (Y/n)");
         input = get_input("> ");
         match input.trim() {
@@ -118,16 +128,6 @@ fn main() -> io::Result<()> {
                 clear_screen(&mut stdout)?;
             }
         }
-    }
-
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open("game_log.csv")
-        .unwrap();
-
-    if let Err(e) = writeln!(file, "{}", board_states.join(",")) {
-        eprintln!("Couldn't write to file: {}", e);
     }
 
     Ok(())
